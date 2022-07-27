@@ -1,44 +1,26 @@
-ifneq (,)
-This makefile requires GNU Make.
-endif
-
-SHELL=bash
+#Current make system
+BIN=bin/
+SRC=src/
 
 MAKEFLAGS:=-r
-.SUFFIXES:
+SHELL=bash
 
-all_cxxflags:=-std=c++17 -g -Wall -Wextra $(CXXFLAGS)
-basedir:=..
-vpath %.C $(basedir)/src
+CC=c++
+CFLAGS=-std=c++17 -g  -Wall -Wextra $(CXXFLAGS)
 
-stem:=cmd2
-targets:=$(addsuffix .tsk, $(stem))
-obj:=$(addsuffix .o, $(stem))
-tdfiles:=$(addsuffix .td, $(stem))
-dfiles:=$(addsuffix .d, $(stem))
-.SECONDARY: $(obj)
+all: $(BIN)cmd2
 
-all: $(targets)
-$(targets): %.tsk: %.o
-	$(CXX) $(LDFLAGS) -o $@ $^ -lstdc++
+$(BIN)cmd2:  $(BIN)cmd2.o $(BIN)admin.o
+	@mkdir -p $(@D)
+	$(CC) $(INC) $^ $(CFLAGS) -o $@ $(LIBS) -lstdc++
 
 .SECONDEXPANSION:
-%.o: %.C %.d $$(file <%.d)
-	$(CXX) $(CPPFLAGS) $(all_cxxflags) -MMD -MF $*.td -o $@ -c $<
-	read obj src headers <$*.td; echo "$$headers" >$*.d
+$(BIN)%.o: $(SRC)%.C $(BIN)%.d $$(file <$(BIN)%.d)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -MMD -MF $(BIN)$*.td -o $@ -c $<
+	read obj src headers <$(BIN)$*.td; echo "$$headers" >$(BIN)$*.d
 	touch -c $@
 
-$(dfiles): ;
+$(BIN)%.d : ;
 %.h: ;
 
-clean:
-	-rm -f $(targets) $(obj) $(tdfiles) $(dfiles)
-
-print-%: force
-	$(info $*=$($*))
-
-force: ;
-
-.PHONY: all clean force
-
-$(basedir)/Makefile::;
