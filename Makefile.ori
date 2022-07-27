@@ -1,0 +1,29 @@
+#Current make system
+BIN=./bin/
+SRC=./src/
+
+LIST=$(BIN)/cmd2 $(BIN)/net2
+
+CC=c++
+CFLAGS=-std=c++17 -g  -Wall -Wextra $(CXXFLAGS)
+
+all: $(LIST)
+
+$(BIN)%.o: $(SRC)%.C
+	@mkdir -p $(@D)
+	$(CC) $(INC) -c $< $(CFLAGS) -o $@
+
+$(SRC)%.d: $(SRC)%.C
+	$(CC) $(CFLAGS) -MM -MT '$(patsubst src/%.C,bin/%.o,$<)' $< -MF $@
+
+$(BIN)cmd2:  $(BIN)cmd2.o
+	@mkdir -p $(@D)
+	$(CC) $(INC) $< $(CFLAGS) -o $@ $(LIBS)
+
+$(BIN)net2:  $(BIN)net2.o
+	@mkdir -p $(@D)
+	$(CC) $(INC) $< $(CFLAGS) -o $@ $(LIBS)
+
+include $(SRC)cmd2.d
+include $(SRC)net2.d
+

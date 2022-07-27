@@ -1,0 +1,24 @@
+This makefile requires out of source builds.
+Gnu make is required.
+This makefile requires bash.
+Create and subdiretory and build from there.
+E.g.
+$ mkdir l64
+$ cd l64
+$ make -f ../Makefile
+
+You can specify a specific target to be built.
+E.g.
+$ make -f ../Makefile net.tsk
+
+You can specify additional compilation flags.
+E.g.
+$ make -f ../Makefile CXXFLAGS=-m64
+
+You can print values of make variables.
+E.g.
+$ make -f ../Makefile print-obj
+
+You can specify compiler.
+E.g.
+$ make -f ../Makefile CXX=clang
