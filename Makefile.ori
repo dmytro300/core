@@ -20,10 +20,10 @@ $(BIN)cmd2:  $(BIN)cmd2.o
 	@mkdir -p $(@D)
 	$(CC) $(INC) $< $(CFLAGS) -o $@ $(LIBS)
 
-$(BIN)net2:  $(BIN)net2.o
+$(BIN)neti:  $(BIN)neti.o
 	@mkdir -p $(@D)
 	$(CC) $(INC) $< $(CFLAGS) -o $@ $(LIBS)
 
 include $(SRC)cmd2.d
-include $(SRC)net2.d
+include $(SRC)neti.d
 

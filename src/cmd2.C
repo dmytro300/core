@@ -11,10 +11,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "warm.H"
-
-Context context;
-
 struct strref
 {
 	size_t len;
@@ -245,12 +241,7 @@ struct AdminMgr{
 	{
 		adminF[name_] = [&](std::vector<token>& tokens, int offset) { 
 			T t; 
-			PerfBuckets pb;
 			populate(tokens, offset, t.init(), t);
-			auto p = pb.probe();
-
-			std::cout  << " probe="<< p << '\n'  << std::endl;
-
 			f(t); 
 		};
 	}
@@ -404,8 +395,6 @@ struct AdminMgr{
 		++i;
 		}
 
-	  context.checkpoint<PrefetchCheckpointId<PrefetchId::Work> >();
-
 		return true;
 	}
 };
@@ -446,10 +435,7 @@ int main(int argc, const char * argv[]) {
 		
 		AdminMgr adminMgr;
 
-		context.run();
-
 		adminMgr.reg<UserCmd>("tail", cmdF);
-
 
 		adminMgr.run(argv[1]);
 
