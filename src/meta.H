@@ -19,6 +19,7 @@ struct strref
 	size_t len;
 	const char* str;
 	strref(const std::string& s_) : len(s_.length()), str(s_.data()) {}
+	strref(const std::string_view& s_) : len(s_.length()), str(s_.data()) {}
 	constexpr strref(const char* s_, size_t len_) : len(len_), str(s_) {}
 	constexpr strref() : len(0), str(nullptr) {}
 
@@ -49,10 +50,15 @@ struct strref
 	}
 };
 
-template<size_t S>
-std::ostream &operator<<(std::ostream &os, const strref &m) { 
+inline std::ostream &operator<<(std::ostream &os, const strref &m) { 
 	return os << m.str;
 }
+
+struct strref_hasher {
+  std::size_t operator()(const strref &m)const{
+    return std::hash<std::string_view>()(m.str);
+  }
+};
 
 template<size_t S>
 struct cstr
@@ -83,6 +89,11 @@ struct cstr
 	{
 		return strref(str,len);	
 	}
+
+	constexpr std::string_view sview() const
+	{
+		return std::string_view(str,len);	
+	}
 	
 	bool operator < (const cstr& rhs_) const
 	{
@@ -93,7 +104,7 @@ struct cstr
 	{
 		if(len != s_.len)
 			return false;
-		return ::memcmp(str,s_.str,len) == 0;
+		return ::memcmp(str, s_.str, len) == 0;
 	}
 
 	bool operator == (const std::string& s_) const
@@ -103,10 +114,51 @@ struct cstr
 };
 
 template<size_t S>
-std::ostream &operator<<(std::ostream &os, cstr<S> const &m) { 
+inline std::ostream &operator<<(std::ostream &os, cstr<S> const &m) { 
 	return os << m.str;
 }
 
+template<size_t S>
+bool operator==(const cstr<S> &l, cstr<S> const &r) { 
+	return l==r;
+}
+
+template<size_t S>
+bool operator<(const cstr<S> &l, const std::string_view &r) { 
+	return l.sview() < r;
+}
+
+template<size_t S>
+bool operator<(const std::string_view &l, const cstr<S> &r) { 
+	return l < r.sview();
+}
+
+template<size_t S>
+struct cstr_hasher {
+  std::size_t operator()(const cstr<S> &m)const{
+    return std::hash<std::string_view>()(m.str);
+  }
+};
+/*
+namespace std {
+	template<>
+	struct less<strref> {
+		bool operator()(const strref &l, strref const &r) const {
+			return true;
+		}
+	};
+}
+
+namespace std {
+	template<size_t S>
+	struct less<cstr<S>> {
+		bool operator()(const cstr<S> &l, std::string_view const &r) { 
+				auto len = std::min(l.len,r.length());
+				return ::memcmp(l.str,r.data(),len) < 0 || l.len < r.length();
+		}
+	};
+}
+*/
 struct BaseFld{
 	virtual bool assign(const strref& v_)=0;
 };
