@@ -9,9 +9,12 @@ CC=c++
 CFLAGS=-std=c++2a -g  -Wall -Wextra $(CXXFLAGS) -Wno-nonportable-include-path
 LDFLAGS=-Wl,-demangle
 
-all: $(BIN)cmd2
+all: $(BIN)cmd2 $(BIN)test2
 
-$(BIN)cmd2:  $(BIN)cmd2.o $(BIN)admin.o
+clean:
+	@rm -rf bin
+
+$(BIN)%:  $(BIN)%.o
 	@mkdir -p $(@D)
 	$(CC) $(INC) $^ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBS) -lstdc++ 
 
@@ -26,6 +29,9 @@ $(BIN)%.o: $(SRC)%.C $(BIN)%.d
 	$(CC) $(CFLAGS) -MMD -MF $(BIN)$*.td -o $@ -c $<
 	read obj src headers <$(BIN)$*.td; echo "$$headers" >$(BIN)$*.d
 	touch -c $@
+
+$(BIN)test2:  $(BIN)test2.o
+$(BIN)cmd2:  $(BIN)cmd2.o $(BIN)admin.o
 
 $(BIN)%.d : ;
 %.h: ;
