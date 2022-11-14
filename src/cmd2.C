@@ -1,4 +1,5 @@
 #include "admin.H"
+#include <unordered_map>
 
 struct UserCmd : public BaseCmd{
 
@@ -16,7 +17,7 @@ struct UserCmd : public BaseCmd{
 
 void cmdF(UserCmd& cmd)
 {
-		std::cout
+	std::cout
 			<< " Execution:"
 			<< " sz="  << cmd.sz.v
 			<< " ev="  << cmd.eval.v
@@ -26,18 +27,18 @@ void cmdF(UserCmd& cmd)
 	
 int main(int argc, const char * argv[]) {
 
-		if(argc != 2)
-		{
-			std::cout  << "examlpe: cmd2.bin \"tail 111 --eval on --sd sdstring\"" <<  '\n'  << std::endl;
-			return 1;
-		}
-		
-		AdminMgr adminMgr;
+	if(argc != 2)
+	{
+		std::cout  << "examlpe: cmd2.bin \"tail 111 --eval on --sd sdstring\"" <<  '\n'  << std::endl;
+		return 1;
+	}
+	
+	AdminMgr adminMgr;
 
-		adminMgr.reg<UserCmd>("tail", cmdF);
+	adminMgr.reg<UserCmd>("tail", cmdF);
 
-		adminMgr.run(argv[1]);
+	adminMgr.run(argv[1]);
 
+	return 0;
 
-    return 0;
 }
