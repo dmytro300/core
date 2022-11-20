@@ -18,7 +18,7 @@ $(BIN)%:  $(BIN)%.o
 $(BIN)%.o: $(SRC)%.C $(BIN)%.d $$(file < $(BIN)%.d)
 #$(BIN)%.o: $(SRC)%.C $(BIN)%.d
 	@mkdir -p $(@D)
-	@printf "%s\n" $^
+	@printf "deps for %s: %s\n" $@ $^
 	$(CC) $(CFLAGS) -MMD -MF $(BIN)$*.td -o $@ -c $<
 	read obj src headers <$(BIN)$*.td; echo "$$headers" >$(BIN)$*.d
 	touch -c $@

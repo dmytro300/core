@@ -13,14 +13,14 @@ using std::endl;
 struct Object {
 
   // Object data, 16 bytes:
-  uint64_t data[2];
+  char data[2];
 
   // Declare out custom allocator for
   // the `Object` structure:
   static PoolAllocator allocator;
 
-  static void *operator new(size_t size) {
-    return allocator.allocate(size);
+  static void *operator new(size_t) {
+    return allocator.allocate();
   }
 
   static void operator delete(void *ptr, size_t) {
@@ -29,7 +29,7 @@ struct Object {
 };
 
 // Instantiate our allocator, using 8 chunks per block:
-PoolAllocator Object::allocator{8};
+PoolAllocator Object::allocator{sizeof(Object), 8};
 
 int main(int, char const **) {
 
@@ -39,29 +39,19 @@ int main(int, char const **) {
 
   Object *objects[arraySize];
 
-  // Two `uint64_t`, 16 bytes.
-  cout << "size(Object) = " << sizeof(Object) << endl << endl;
-
   // Allocate 10 objects. This causes allocating two larger,
   // blocks since we store only 8 chunks per block:
 
-  cout << "About to allocate " << arraySize << " objects" << endl;
+  cout << "About to allocate " << objects[10] << " objects" << endl;
 
   for (int i = 0; i < arraySize; ++i) {
     objects[i] = new Object();
   }
 
+  cout << "About to allocate " << objects[10] << " objects" << endl;
+
   // Deallocated all the objects:
-  for (int i = arraySize; i >= 0; --i) {
-    delete objects[i];
-  }
-
-  for (int i = 0; i < arraySize; ++i) 
-	{
-  	objects[0] = new Object();
-  	cout << "new [0] = " << objects[0] << endl << endl;
-	}
-
+  delete objects[10];
 {
 		std::unordered_map<cstr<3>, int, cstr_hasher<3>> cmap;
 		cmap["123"] = 9;

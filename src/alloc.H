@@ -13,6 +13,34 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+
+// compute the next highest power of 2 of 32-bit v
+inline unsigned int nextPowerTwo(unsigned int v)
+{
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v++;
+	return v;
+}
+
+inline void*
+align_back(void* ptr, std::size_t alignment) noexcept
+{
+    std::uintptr_t ptr_int = reinterpret_cast<std::uintptr_t>(ptr);
+    std::size_t remainder = ptr_int % alignment;
+    return static_cast<char*>(ptr) - remainder;
+}
+
+inline bool is_aligned(const void *pointer, size_t byte_count)
+{ 
+		return (uintptr_t)pointer % byte_count == 0; 
+}
+
 
 /*
 **
@@ -33,15 +61,20 @@ class PoolAllocator {
 	};
 
 	public:
-	PoolAllocator(size_t chunksPerBlock)
-		: _chunksPerBlock(chunksPerBlock) {}
+	PoolAllocator(size_t sz_, size_t chunksPerBlock)
+		: _sz(std::max(sizeof(Chunk), sz_)), _chunksPerBlock(chunksPerBlock) , _blockSz(nextPowerTwo(_sz * chunksPerBlock))
+	{
+  	std::cout << "\nPoolAllocator sz:" << sz_ << " blockSize:" << _blockSz << std::endl;
+	}
 
-	void *allocate(size_t size);
+	void *allocate();
 	void deallocate(void *ptr);
 
 	private:
 
-	size_t _chunksPerBlock;
+	const size_t _sz;
+	const size_t _chunksPerBlock;
+	const size_t _blockSz;
 
 	/**
 	 * Allocation pointer.
@@ -56,18 +89,22 @@ class PoolAllocator {
 
 inline PoolAllocator::Chunk *PoolAllocator::allocateBlock(size_t chunkSize) 
 {
-  std::cout << "\nAllocating block (" << _chunksPerBlock << " Chunks):\n\n" << std::endl;
-
-  size_t blockSize = _chunksPerBlock * chunkSize;
+  std::cout << "\nAllocating block (" << _chunksPerBlock << " ) blockSize:" << _blockSz << std::endl;
 
   // The first Chunk of the new block.
-  Chunk *blockBegin = reinterpret_cast<Chunk *>(malloc(blockSize));
+  //Chunk *blockBegin = reinterpret_cast<Chunk *>(malloc(blockSize));
+	void *blockBegin = nullptr;
+  auto res = posix_memalign(&blockBegin, _blockSz, _blockSz);
 
-  Chunk *ch = blockBegin;
+	if(res)
+	{
+  	std::cerr << "\nFailed to allocate block." << std::endl;
+		throw std::bad_alloc();
+	}	
 
+  Chunk *ch = reinterpret_cast<Chunk *>(blockBegin);
   // Once the block is allocated, we need to chain all
   // the Chunks in this block:
-
   for (size_t i = 0; i < _chunksPerBlock - 1; ++i) {
     ch->next =
         reinterpret_cast<Chunk *>(reinterpret_cast<char *>(ch) + chunkSize);
@@ -76,7 +113,7 @@ inline PoolAllocator::Chunk *PoolAllocator::allocateBlock(size_t chunkSize)
 
   ch->next = nullptr;
 
-  return blockBegin;
+  return reinterpret_cast<Chunk *>(blockBegin);
 }
 
 /**
@@ -85,13 +122,13 @@ inline PoolAllocator::Chunk *PoolAllocator::allocateBlock(size_t chunkSize)
  * If there are no chunks left in the block,
  * allocates a new block.
  */
-void *PoolAllocator::allocate(size_t size) {
+void *PoolAllocator::allocate() {
 
   // No chunks left in the current block, or no any block
   // exists yet. Allocate a new one, passing the chunk size:
 
   if (mAlloc == nullptr) {
-    mAlloc = allocateBlock(size);
+    mAlloc = allocateBlock(_sz);
   }
 
   // The return value is the current position of
@@ -112,9 +149,14 @@ void *PoolAllocator::allocate(size_t size) {
  */
 void PoolAllocator::deallocate(void *chunk) {
 
+	if( !is_aligned(chunk,_sz) )
+	{
+  	std::cerr << "\nDeallocation of wrong  address." << std::endl;
+		throw std::bad_alloc();
+	}
+
   // The freed chunk's next pointer points to the
   // current allocation pointer:
-
   reinterpret_cast<Chunk *>(chunk)->next = mAlloc;
 
   // And the allocation pointer is now set

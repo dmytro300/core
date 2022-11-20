@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+
+
 struct strref
 {
 	size_t len;
@@ -139,6 +141,7 @@ struct cstr_hasher {
     return std::hash<std::string_view>()(m.str);
   }
 };
+
 /*
 namespace std {
 	template<>
@@ -159,6 +162,7 @@ namespace std {
 	};
 }
 */
+
 struct BaseFld{
 	virtual bool assign(const strref& v_)=0;
 };
