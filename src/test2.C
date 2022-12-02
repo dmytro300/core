@@ -41,17 +41,15 @@ int main(int, char const **) {
 
   // Allocate 10 objects. This causes allocating two larger,
   // blocks since we store only 8 chunks per block:
-
-  cout << "About to allocate " << objects[10] << " objects" << endl;
-
   for (int i = 0; i < arraySize; ++i) {
     objects[i] = new Object();
   }
 
-  cout << "About to allocate " << objects[10] << " objects" << endl;
+  for (int i = 0; i < arraySize; ++i) {
+    delete objects[i];
+  }
 
-  // Deallocated all the objects:
-  delete objects[10];
+  //delete objects[10];
 {
 		std::unordered_map<cstr<3>, int, cstr_hasher<3>> cmap;
 		cmap["123"] = 9;

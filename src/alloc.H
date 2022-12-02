@@ -80,6 +80,7 @@ class PoolAllocator {
 	 * Allocation pointer.
 	 */
 	Chunk *mAlloc = nullptr;
+	std::vector<Chunk*> chunks;
 
 	/**
 	 * Allocates a larger block (pool) for Chunks.
@@ -89,7 +90,6 @@ class PoolAllocator {
 
 inline PoolAllocator::Chunk *PoolAllocator::allocateBlock(size_t chunkSize) 
 {
-  std::cout << "\nAllocating block (" << _chunksPerBlock << " ) blockSize:" << _blockSz << std::endl;
 
   // The first Chunk of the new block.
   //Chunk *blockBegin = reinterpret_cast<Chunk *>(malloc(blockSize));
@@ -102,7 +102,11 @@ inline PoolAllocator::Chunk *PoolAllocator::allocateBlock(size_t chunkSize)
 		throw std::bad_alloc();
 	}	
 
+  std::cout << "\nAllocating block (" << blockBegin  << ")" << std::endl;
+
   Chunk *ch = reinterpret_cast<Chunk *>(blockBegin);
+	chunks.push_back(ch);
+	
   // Once the block is allocated, we need to chain all
   // the Chunks in this block:
   for (size_t i = 0; i < _chunksPerBlock - 1; ++i) {
@@ -152,6 +156,14 @@ void PoolAllocator::deallocate(void *chunk) {
 	if( !is_aligned(chunk,_sz) )
 	{
   	std::cerr << "\nDeallocation of wrong  address." << std::endl;
+		throw std::bad_alloc();
+	}
+
+	Chunk* ptr = reinterpret_cast<Chunk *>(align_back(chunk, _blockSz));
+
+	if( std::find(chunks.begin(), chunks.end(), ptr) == chunks.end() )
+	{
+  	std::cerr << "\nDeallocation of wrong outside address." << std::endl;
 		throw std::bad_alloc();
 	}
 

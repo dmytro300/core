@@ -16,7 +16,6 @@ $(BIN)%:  $(BIN)%.o
 .SECONDEXPANSION:
 
 $(BIN)%.o: $(SRC)%.C $(BIN)%.d $$(file < $(BIN)%.d)
-#$(BIN)%.o: $(SRC)%.C $(BIN)%.d
 	@mkdir -p $(@D)
 	@printf "deps for %s: %s\n" $@ $^
 	$(CC) $(CFLAGS) -MMD -MF $(BIN)$*.td -o $@ -c $<
