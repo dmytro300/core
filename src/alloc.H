@@ -62,9 +62,13 @@ class PoolAllocator {
 
 	public:
 	PoolAllocator(size_t sz_, size_t chunksPerBlock)
-		: _sz(std::max(sizeof(Chunk), sz_)), _chunksPerBlock(chunksPerBlock) , _blockSz(nextPowerTwo(_sz * chunksPerBlock))
+		: _sz(std::max(sizeof(Chunk), sz_)), _blockSz(_sz * chunksPerBlock), _chunksPerBlock (chunksPerBlock)
 	{
-  	std::cout << "\nPoolAllocator sz:" << sz_ << " blockSize:" << _blockSz << std::endl;
+  	std::cout << "PoolAllocator assumes" 
+							<< " sz:" << _sz 
+							<< " blockSize:" << _blockSz 
+							<< " chunksPerBlock:" << _chunksPerBlock 
+							<< std::endl;
 	}
 
 	void *allocate();
@@ -73,8 +77,8 @@ class PoolAllocator {
 	private:
 
 	const size_t _sz;
-	const size_t _chunksPerBlock;
 	const size_t _blockSz;
+	const size_t _chunksPerBlock;
 
 	/**
 	 * Allocation pointer.
@@ -94,7 +98,7 @@ inline PoolAllocator::Chunk *PoolAllocator::allocateBlock(size_t chunkSize)
   // The first Chunk of the new block.
   //Chunk *blockBegin = reinterpret_cast<Chunk *>(malloc(blockSize));
 	void *blockBegin = nullptr;
-  auto res = posix_memalign(&blockBegin, _blockSz, _blockSz);
+  auto res = posix_memalign(&blockBegin, nextPowerTwo(_sz - 1), _blockSz);
 
 	if(res)
 	{
@@ -131,6 +135,8 @@ void *PoolAllocator::allocate() {
   // No chunks left in the current block, or no any block
   // exists yet. Allocate a new one, passing the chunk size:
 
+  std::cout << "alloc" << std::endl;
+
   if (mAlloc == nullptr) {
     mAlloc = allocateBlock(_sz);
   }
@@ -151,20 +157,42 @@ void *PoolAllocator::allocate() {
 /**
  * Puts the chunk into the front of the chunks list.
  */
-void PoolAllocator::deallocate(void *chunk) {
+void PoolAllocator::deallocate(void *chunk) 
+{
+  std::cout << "dealloc" << std::endl;
 
-	if( !is_aligned(chunk,_sz) )
+	if( chunk == mAlloc )
 	{
-  	std::cerr << "\nDeallocation of wrong  address." << std::endl;
-		throw std::bad_alloc();
+  	std::cerr << "Double free." << std::endl;
+		//throw std::bad_alloc();
+		return;
 	}
 
-	Chunk* ptr = reinterpret_cast<Chunk *>(align_back(chunk, _blockSz));
-
-	if( std::find(chunks.begin(), chunks.end(), ptr) == chunks.end() )
+	/*
+	if( !is_aligned(chunk,_sz) )
 	{
-  	std::cerr << "\nDeallocation of wrong outside address." << std::endl;
-		throw std::bad_alloc();
+  	std::cerr << "Deallocation of wrong misaligned address." << std::endl;
+		//throw std::bad_alloc();
+		return;
+	}
+	*/
+
+	Chunk* ptr = reinterpret_cast<Chunk *>(chunk);
+	bool found = false;
+	for(size_t i=0; i<chunks.size(); i++)
+	{
+		if( chunks[i] <= ptr && ptr <= chunks[i] + _blockSz )
+		{
+			found = true;
+			break;
+		}
+	}
+
+	if( !found )
+	{
+		std::cerr << "Deallocation of wrong outside address." << std::endl;
+		//throw std::bad_alloc();
+		return;
 	}
 
   // The freed chunk's next pointer points to the
@@ -176,3 +204,138 @@ void PoolAllocator::deallocate(void *chunk) {
 
   mAlloc = reinterpret_cast<Chunk *>(chunk);
 }
+
+/*
+template<class R, class...Args>
+struct func<R(Args...)> {
+  mutable std::any state;
+  R(*f)(std::any& state, Args&&...) = nullptr;
+  template<class T>
+  void bind(T&& t) {
+    state = std::forward<T>(t);
+    f = [](std::any& state, Args&&...args)->R {
+      return std::any_cast<T&>(state)(std::forward<Args>(args)...);
+    };
+  }
+  R operator()(Args...args)const {
+    return f(state, std::forward<Args>(args)...);
+  }
+};
+*/
+
+template <typename K, typename V>
+struct HashNode
+{
+    K key;
+    V value;
+    // next bucket with the same key
+    HashNode *next = NULL;
+};
+
+template <typename K, typename V, unsigned int TABLE_SIZE=16>
+class HashMap {
+public:
+
+		typedef HashNode<K, V> Item;
+		typedef std::hash<K> H;
+
+    HashMap() 
+  	: allocator(sizeof(Item),512)
+		{
+        // construct zero initialized hash table of size
+        table = new Item*[TABLE_SIZE]();
+    }
+
+    ~HashMap() {
+        // destroy all buckets one by one
+        for (unsigned int i = 0; i < TABLE_SIZE; ++i) {
+            Item *entry = table[i];
+            while (entry != NULL) 
+						{
+                Item *prev = entry;
+                entry = entry->next;
+								prev->~Item();
+								allocator.deallocate(prev);
+            }
+            table[i] = NULL;
+        }
+        // destroy the hash table
+        delete [] table;
+    }
+
+    bool get(const K &key, V &value) 
+		{
+        unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
+
+        Item *entry = table[hashValue];
+
+        while (entry != NULL) {
+            if (entry->key == key) {
+                value = entry->value;
+                return true;
+            }
+            entry = entry->next;
+        }
+        return false;
+    }
+
+    void put(const K &key, const V &value) 
+		{
+        unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
+        Item *prev = NULL;
+        Item *entry = table[hashValue];
+
+        while (entry != NULL && entry->key != key) 
+				{
+            prev = entry;
+            entry = entry->next;
+        }
+
+        if (entry == NULL) 
+				{
+            entry = new (allocator.allocate()) Item{key, value};
+            if (prev == NULL) {
+                // insert as first bucket
+                table[hashValue] = entry;
+            } else {
+                prev->next = entry;
+            }
+        } else {
+            // just update the value
+            entry->value = value;
+        }
+    }
+
+    void remove(const K &key) 
+		{
+        unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
+
+        Item *prev = NULL;
+        Item *entry = table[hashValue];
+
+        while (entry != NULL && entry->key != key) {
+            prev = entry;
+            entry = entry->next;
+        }
+
+        if (entry == NULL) {
+            // key not found
+            return;
+        }
+        else {
+            if (prev == NULL) {
+                // remove first bucket of the list
+                table[hashValue] = entry->next;
+            } else {
+                prev->next = entry->next;
+            }
+						entry->~Item();
+            allocator.deallocate(entry);
+        }
+    }
+
+private:
+    // hash table
+    Item** table;
+  	PoolAllocator allocator;
+};

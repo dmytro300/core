@@ -3,6 +3,11 @@
 #include <unordered_map>
 #include <iostream>
 
+#include <iomanip>
+#include <utility>
+#include <vector>
+#include <string>
+
 using std::cout;
 using std::endl;
 
@@ -13,7 +18,7 @@ using std::endl;
 struct Object {
 
   // Object data, 16 bytes:
-  char data[2];
+  char data[40];
 
   // Declare out custom allocator for
   // the `Object` structure:
@@ -29,18 +34,20 @@ struct Object {
 };
 
 // Instantiate our allocator, using 8 chunks per block:
-PoolAllocator Object::allocator{sizeof(Object), 8};
+PoolAllocator Object::allocator{sizeof(Object), 512};
+
+std::unique_ptr<Object> mmm(std::unique_ptr<Object> p)
+{
+	return p;
+}
 
 int main(int, char const **) {
 
   // Allocate 10 pointers to our `Object` instances:
-
-  constexpr int arraySize = 10;
+  constexpr int arraySize = 512;
 
   Object *objects[arraySize];
 
-  // Allocate 10 objects. This causes allocating two larger,
-  // blocks since we store only 8 chunks per block:
   for (int i = 0; i < arraySize; ++i) {
     objects[i] = new Object();
   }
@@ -49,7 +56,18 @@ int main(int, char const **) {
     delete objects[i];
   }
 
-  //delete objects[10];
+	Object *o = reinterpret_cast<Object*>(reinterpret_cast<char*>(objects)+1);
+	delete o;
+	delete objects[511];
+	delete objects[512];
+	
+	//std::unique_ptr<Object> p(new Object);
+	//std::unique_ptr<Object> d(new Object);
+
+	//p = mmm (std::move( d ));
+	//p = mmm( d );
+
+	
 {
 		std::unordered_map<cstr<3>, int, cstr_hasher<3>> cmap;
 		cmap["123"] = 9;
@@ -72,5 +90,24 @@ int main(int, char const **) {
 
 		if (tmp.find(key) != tmp.end())
 				 std::cout << "It works" << std::endl;
+}
+{
+    std::string str = "Salut";
+    std::vector<std::string> v;
+ 
+    // uses the push_back(const T&) overload, which means 
+    // we'll incur the cost of copying str
+    v.push_back(str);
+    std::cout << "After copy, str is " << std::quoted(str) << '\n';
+ 
+    // uses the rvalue reference push_back(T&&) overload, 
+    // which means no strings will be copied; instead, the contents
+    // of str will be moved into the vector.  This is less
+    // expensive, but also means str might now be empty.
+    v.emplace_back(str);
+    std::cout << "After move, str is " << std::quoted(str) << '\n';
+ 
+    std::cout << "The contents of the vector are { " << std::quoted(v[0])
+                                             << ", " << std::quoted(v[1]) << " }\n";
 }
 }

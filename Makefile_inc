@@ -4,7 +4,7 @@ MAKEFLAGS:=-r -j3
 SHELL=bash
 
 CC=c++
-CFLAGS=-std=c++2a -g  -Wall -Wextra $(CXXFLAGS) -Wno-nonportable-include-path
+CFLAGS=-std=c++17 -g  -Wall -Wextra $(CXXFLAGS) -Wno-nonportable-include-path
 LDFLAGS=-Wl,-demangle
 
 $(BIN)%:  $(BIN)%.o
