@@ -18,7 +18,7 @@ using std::endl;
 struct Object {
 
   // Object data, 16 bytes:
-  char data[40];
+  std::string d;
 
   // Declare out custom allocator for
   // the `Object` structure:
@@ -41,13 +41,18 @@ std::unique_ptr<Object> mmm(std::unique_ptr<Object> p)
 	return p;
 }
 
+Object mmm(Object p)
+{
+	return p;
+}
+
 int main(int, char const **) {
 
   // Allocate 10 pointers to our `Object` instances:
   constexpr int arraySize = 512;
 
   Object *objects[arraySize];
-
+/*
   for (int i = 0; i < arraySize; ++i) {
     objects[i] = new Object();
   }
@@ -60,11 +65,11 @@ int main(int, char const **) {
 	delete o;
 	delete objects[511];
 	delete objects[512];
-	
-	//std::unique_ptr<Object> p(new Object);
-	//std::unique_ptr<Object> d(new Object);
+*/
+	std::unique_ptr<Object> p(new Object);
+	std::unique_ptr<Object> d(new Object);
 
-	//p = mmm (std::move( d ));
+	p = mmm (std::move( d ));
 	//p = mmm( d );
 
 	
@@ -92,22 +97,20 @@ int main(int, char const **) {
 				 std::cout << "It works" << std::endl;
 }
 {
-    std::string str = "Salut";
-    std::vector<std::string> v;
+    std::vector<Object> v;
  
+		Object o{"hehe"}; 
     // uses the push_back(const T&) overload, which means 
     // we'll incur the cost of copying str
-    v.push_back(str);
-    std::cout << "After copy, str is " << std::quoted(str) << '\n';
- 
+    v.push_back(o);
+		std::cout << "After move, str is " << std::quoted(o.d) << '\n';
+
     // uses the rvalue reference push_back(T&&) overload, 
     // which means no strings will be copied; instead, the contents
     // of str will be moved into the vector.  This is less
     // expensive, but also means str might now be empty.
-    v.emplace_back(str);
-    std::cout << "After move, str is " << std::quoted(str) << '\n';
- 
-    std::cout << "The contents of the vector are { " << std::quoted(v[0])
-                                             << ", " << std::quoted(v[1]) << " }\n";
+    v.emplace_back(o);
+		mmm(std::move(o));
+		std::cout << "After move, str is " << std::quoted(o.d) << '\n';
 }
 }

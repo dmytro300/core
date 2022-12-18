@@ -236,106 +236,137 @@ template <typename K, typename V, unsigned int TABLE_SIZE=16>
 class HashMap {
 public:
 
-		typedef HashNode<K, V> Item;
-		typedef std::hash<K> H;
+	typedef HashNode<K, V> Item;
+	typedef std::hash<K> H;
 
-    HashMap() 
-  	: allocator(sizeof(Item),512)
+	HashMap() 
+	: allocator(sizeof(Item),TABLE_SIZE*2)
+	{
+			// construct zero initialized hash table of size
+			table = new Item*[TABLE_SIZE]();
+	}
+
+	~HashMap() {
+			// destroy all buckets one by one
+			for (unsigned int i = 0; i < TABLE_SIZE; ++i) {
+					Item *entry = table[i];
+					while (entry != NULL) 
+					{
+							Item *prev = entry;
+							entry = entry->next;
+							prev->~Item();
+							allocator.deallocate(prev);
+					}
+					table[i] = NULL;
+			}
+			// destroy the hash table
+			delete [] table;
+	}
+
+	bool get(const K &key, V &value) 
+	{
+			unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
+
+			Item *entry = table[hashValue];
+
+			while (entry != NULL) {
+					if (entry->key == key) {
+							value = entry->value;
+							return true;
+					}
+					entry = entry->next;
+			}
+			return false;
+	}
+
+	void put(const K &key, const V &value) 
+	{
+		unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
+		Item *prev = NULL;
+		Item *entry = table[hashValue];
+
+		while (entry != NULL && entry->key != key) 
 		{
-        // construct zero initialized hash table of size
-        table = new Item*[TABLE_SIZE]();
-    }
+				prev = entry;
+				entry = entry->next;
+		}
 
-    ~HashMap() {
-        // destroy all buckets one by one
-        for (unsigned int i = 0; i < TABLE_SIZE; ++i) {
-            Item *entry = table[i];
-            while (entry != NULL) 
-						{
-                Item *prev = entry;
-                entry = entry->next;
-								prev->~Item();
-								allocator.deallocate(prev);
-            }
-            table[i] = NULL;
-        }
-        // destroy the hash table
-        delete [] table;
-    }
-
-    bool get(const K &key, V &value) 
+		if (entry == NULL) 
 		{
-        unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
+				entry = new (allocator.allocate()) Item{key, value};
+				if (prev == NULL) {
+						// insert as first bucket
+						table[hashValue] = entry;
+				} else {
+						prev->next = entry;
+				}
+		} else {
+				// just update the value
+				entry->value = value;
+		}
+	}
 
-        Item *entry = table[hashValue];
+	void remove(const K &key) 
+	{
+		unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
 
-        while (entry != NULL) {
-            if (entry->key == key) {
-                value = entry->value;
-                return true;
-            }
-            entry = entry->next;
-        }
-        return false;
-    }
+		Item *prev = NULL;
+		Item *entry = table[hashValue];
 
-    void put(const K &key, const V &value) 
-		{
-        unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
-        Item *prev = NULL;
-        Item *entry = table[hashValue];
+		while (entry != NULL && entry->key != key) {
+				prev = entry;
+				entry = entry->next;
+		}
 
-        while (entry != NULL && entry->key != key) 
-				{
-            prev = entry;
-            entry = entry->next;
-        }
-
-        if (entry == NULL) 
-				{
-            entry = new (allocator.allocate()) Item{key, value};
-            if (prev == NULL) {
-                // insert as first bucket
-                table[hashValue] = entry;
-            } else {
-                prev->next = entry;
-            }
-        } else {
-            // just update the value
-            entry->value = value;
-        }
-    }
-
-    void remove(const K &key) 
-		{
-        unsigned long hashValue = H()(key) & (TABLE_SIZE - 1);
-
-        Item *prev = NULL;
-        Item *entry = table[hashValue];
-
-        while (entry != NULL && entry->key != key) {
-            prev = entry;
-            entry = entry->next;
-        }
-
-        if (entry == NULL) {
-            // key not found
-            return;
-        }
-        else {
-            if (prev == NULL) {
-                // remove first bucket of the list
-                table[hashValue] = entry->next;
-            } else {
-                prev->next = entry->next;
-            }
-						entry->~Item();
-            allocator.deallocate(entry);
-        }
-    }
+		if (entry == NULL) {
+				// key not found
+				return;
+		}
+		else {
+				if (prev == NULL) {
+						// remove first bucket of the list
+						table[hashValue] = entry->next;
+				} else {
+						prev->next = entry->next;
+				}
+				entry->~Item();
+				allocator.deallocate(entry);
+		}
+	}
 
 private:
     // hash table
     Item** table;
   	PoolAllocator allocator;
 };
+
+template<typename T, size_t S=16> 
+struct fixed_vector
+{
+	typedef T& ref;
+	typedef const T& cref;
+	typedef T* ptr;
+
+	std::array<T,S> _v; 
+	size_t  _size = 0;
+
+	constexpr ref operator[]( size_t pos ){
+		return _v[pos];
+	}
+
+  template <typename... Args>
+  constexpr ref emplace_back(Args&&... args) {
+		if (_size == S) throw std::bad_alloc();
+    return *new (_v.data() + _size++) T(std::forward<Args>(args)...);
+  }
+
+  constexpr ref push_back(const T & t) { return emplace_back(t); }
+  constexpr ref push_back(T && t) { return emplace_back(std::move(t)); }	
+
+	constexpr ptr begin() { return _v.begin(); }
+	constexpr ptr end() { return _v.end(); }
+
+	constexpr size_t size()const{ return _size; }
+};
+
+

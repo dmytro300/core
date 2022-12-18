@@ -215,7 +215,6 @@ struct FlgFld : public BaseFld{
 	}
 };
 
-
 struct BaseCmd{
 
 	typedef cstr<4> FldName;
@@ -235,8 +234,7 @@ struct BaseCmd{
   typedef std::map<FldName,pfield*> FldInfoMap;
 	typedef BaseCmd::pfield (*FldFunc)(BaseCmd *);
 	
-	template<size_t M> 
-	using pvec = std::array<FldFunc,M>; 
+	using pvec = std::array<FldFunc,64>; 
 };
 
 #define FLDD(T,N,D,P) T N{D}; static constexpr BaseCmd::pfield N##F(BaseCmd* p) { return {#N,P,static_cast<self*>(p)->N};}

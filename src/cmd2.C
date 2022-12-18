@@ -9,7 +9,7 @@ struct UserCmd : public BaseCmd{
 	FLDN(FlgFld,eval,true)
 	FLDN(StrFld,sd,true)
 
-	static constexpr BaseCmd::pvec<3> init()
+	static constexpr BaseCmd::pvec init()
 	{
 		return { &self::szF, &self::evalF, &self::sdF };
 	}
