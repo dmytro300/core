@@ -24,8 +24,8 @@ struct Object {
   // the `Object` structure:
   static PoolAllocator allocator;
 
-  static void *operator new(size_t) {
-    return allocator.allocate();
+  static void *operator new(size_t sz_) {
+    return allocator.allocate(sz_);
   }
 
   static void operator delete(void *ptr, size_t) {
@@ -33,8 +33,7 @@ struct Object {
   }
 };
 
-// Instantiate our allocator, using 8 chunks per block:
-PoolAllocator Object::allocator{sizeof(Object), 512};
+PoolAllocator Object::allocator;
 
 std::unique_ptr<Object> mmm(std::unique_ptr<Object> p)
 {
@@ -51,8 +50,9 @@ int main(int, char const **) {
   // Allocate 10 pointers to our `Object` instances:
   constexpr int arraySize = 512;
 
-  Object *objects[arraySize];
 /*
+  Object *objects[arraySize];
+
   for (int i = 0; i < arraySize; ++i) {
     objects[i] = new Object();
   }

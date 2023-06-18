@@ -97,9 +97,7 @@ int main()
 		HashMap<key, value> m;
 
 		for (int i=0;i<7;i++)
-			m[i]="100";
-
-			//m.put(i,"100");
+			m.put(i,"100");
 
 
     std::cout << "next prime:" << nextPrime(1000000) << std::endl;

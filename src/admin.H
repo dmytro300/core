@@ -48,6 +48,8 @@ struct AdminMgr{
 	typedef std::function<void(std::vector<token>&, int)> AdminFunc;
 	std::map<std::string,AdminFunc> adminF;
 
+	bool populate(std::vector<token>& tokens, size_t offset, const BaseCmd::pvec& pvec_, BaseCmd& b);
+
 	template <typename T>
 	void reg(const std::string& name_, std::function<void(T&)> f)
 	{
